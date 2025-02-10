@@ -1,0 +1,51 @@
+name: Deploy ReadUser to AWS EC2
+
+on:
+  push:
+    branches:
+      - test
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 🛎️ Checkout repository
+      uses: actions/checkout@v3
+
+    - name: 🐳 Log in to Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+
+    - name: 📦 Build Docker image
+      run: |
+        docker build -t mateocarr/projectawsstore-readuser:latest .
+    
+    - name: 🚀 Push Docker image to Docker Hub
+      run: |
+        docker push mateocarr/projectawsstore-readuser:latest
+
+    - name: 🔑 Connect to EC2 and deploy container
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.EC2_HOST_READ }}
+        username: ${{ secrets.EC2_USER }}
+        key: ${{ secrets.EC2_SSH_KEY }}
+        script: |
+          # Iniciar sesión en Docker Hub
+          sudo docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
+
+          # Descargar la última imagen desde Docker Hub
+          sudo docker pull mateocarr/projectawsstore-readuser:latest
+
+          # Detener y eliminar el contenedor anterior si existe
+          sudo docker stop readuser || true && sudo docker rm readuser || true
+
+          # Crear el archivo .env desde el secreto de GitHub
+          echo "${{ secrets.ENV_FILE }}" > .env
+
+          # Ejecutar el contenedor con el archivo .env
+          sudo docker run -d -p 5006:5006 -p 4006:4006 --env-file .env --name readuser mateocarr/projectawsstore-readuser
