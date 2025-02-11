@@ -2,6 +2,7 @@ type Query {
     getAllUsers: [User]
     getUserById(id: ID!): User
     getUserByEmail(email: String!): User
+    authenticateUser(email: String!, password: String!): String
 }
 
 type User {
