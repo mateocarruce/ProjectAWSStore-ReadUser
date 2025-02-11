@@ -11,4 +11,5 @@ type User {
     identification_number: String!
     email: String!
     phone_number: String!
+    password_hash: String!
 }
